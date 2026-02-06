@@ -2,7 +2,12 @@ apiVersion: "clickhouse.altinity.com/v1"
 kind: "ClickHouseInstallation"
 metadata:
   name: "clickhouse-cluster"
+  finalizers:
+    - finalizer.clickhouseinstallation.altinity.com
 spec:
+  defaults:
+    templates:
+      podTemplate: pod-template
   configuration:
     users:
       # printf 'test_password' | sha256sum
@@ -10,5 +15,38 @@ spec:
       # to allow access outside from kubernetes
       test_user/networks/ip:
         - 0.0.0.0/0
+    settings:
+      http_port: 8123
+      tcp_port: 9001
+      interserver_http_port: 9010
     clusters:
       - name: "primary"
+        layout:
+          shardsCount: 1
+          replicasCount: 1
+  templates:
+    podTemplates:
+      - name: pod-template
+        # metadata:
+        #   labels:
+        #     custom.label: "label.value"
+        #   annotations:
+        #     custom.annotation: "annotation.value"
+        spec:
+          containers:
+            - name: clickhouse
+              image: clickhouse/clickhouse-server:26.1
+              # Container has explicitly specified resource requests
+              resources:
+                limits:
+                  cpu: "2000m"
+                  memory: 4Gi
+              # Container has explicitly specified ports
+              ports:
+                - name: http
+                  containerPort: 8123
+                - name: tcp
+                  containerPort: 9001
+                - name: interserver
+                  containerPort: 9010
+    
